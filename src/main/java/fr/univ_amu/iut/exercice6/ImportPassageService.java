@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import javax.sql.DataSource;
 
@@ -64,7 +65,52 @@ public class ImportPassageService {
     // 4. finally : refermer la connexion.
     //
     // Astuce : ouvrez la connexion AVANT le try afin de pouvoir faire rollback dans le catch.
+    Connection connexion = null;
+    try {
+      connexion = source.getConnection();
+      connexion.setAutoCommit(false);
+      try (PreparedStatement ps1 =
+          connexion.prepareStatement(sqlPassage, Statement.RETURN_GENERATED_KEYS)) {
+        ps1.setString(1, numeroCarre);
+        ps1.setString(2, codePoint);
+        ps1.setInt(3, numeroPassage);
+        ps1.setInt(4, annee);
+        ps1.executeUpdate();
+        try (ResultSet keys = ps1.getGeneratedKeys()) {
+          keys.next();
+          passageId = keys.getLong(1);
+        }
+      }
 
+      try (PreparedStatement ps2 = connexion.prepareStatement(sqlObservation)) {
+        for (ObservationAImporter observ : observations) {
+          ps2.setLong(1, passageId);
+          ps2.setDouble(2, observ.tempsDebut());
+          ps2.setDouble(3, observ.tempsFin());
+          ps2.setDouble(4, observ.frequenceMediane());
+          ps2.setString(5, observ.codeTaxon());
+          ps2.setDouble(6, observ.probabilite());
+          ps2.executeUpdate();
+        }
+      }
+      connexion.commit();
+
+    } catch (SQLException e) {
+      if (connexion != null) {
+        try {
+          connexion.rollback(); // un échec -> on annule TOUT
+        } catch (SQLException ex) {
+        }
+        throw new DataAccessException("message", e);
+      }
+
+    } finally {
+      if (connexion != null)
+        try {
+          connexion.close(); // toujours refermer
+        } catch (SQLException ex) {
+        }
+    }
     return passageId;
   }
 
