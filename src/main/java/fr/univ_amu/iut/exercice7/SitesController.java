@@ -5,6 +5,7 @@ import fr.univ_amu.iut.exercice4.Site;
 import fr.univ_amu.iut.jdbc.DataAccessException;
 import java.time.LocalDate;
 import java.util.Optional;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -49,6 +50,29 @@ public class SitesController {
     //    "PointFixeRecherche").
     // 5. Désactiver boutonSupprimer tant qu'aucune ligne n'est sélectionnée
     //    (disableProperty lié à selectedItemProperty().isNull() du selection model).
+
+    colNumero.setCellValueFactory(
+        c -> {
+          return new SimpleStringProperty(c.getValue().numeroCarre());
+        });
+
+    colNom.setCellValueFactory(
+        c -> {
+          return new SimpleStringProperty(c.getValue().nomConvivial());
+        });
+
+    colProtocole.setCellValueFactory(
+        c -> {
+          return new SimpleStringProperty(c.getValue().protocole());
+        });
+
+    tableSites.setItems(viewModel.sitesProperty());
+    labelResume.textProperty().bind(viewModel.resumeProperty());
+    choiceProtocole.getItems().addAll("PointFixeStandard", "PointFixeRecherche");
+
+    boutonSupprimer
+        .disableProperty()
+        .bind(tableSites.getSelectionModel().selectedItemProperty().isNull());
   }
 
   @FXML
